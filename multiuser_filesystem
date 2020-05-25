@@ -1,0 +1,390 @@
+/*
+ 
+ 
+ * @file: [H2006] 멀티유저 파일시스템
+ 
+ 
+ * @brief: 샘플 답안
+ 
+ 
+ * @copyright: All rights reserved (c) 2020 Samsung Electronics, Inc.
+ 
+ 
+ */
+ 
+ 
+void mstrcpy(char dst[], const char src[]) {
+ int c = 0;
+ while ((dst[c] = src[c]) != 0) ++c;
+}
+ 
+ 
+int mstrcmp(const char str1[], const char str2[]) {
+ int c = 0;
+ while (str1[c] != 0 && str1[c] == str2[c]) ++c;
+ return str1[c] - str2[c];
+}
+ 
+ 
+int userN;
+char User[20][8], U2G[20];
+ 
+ 
+int groupN;
+char Group[10][8];
+ 
+ 
+struct Node
+{
+ int  type;
+ 
+ 
+ char Name[8];
+ char Ext[8];
+ 
+ 
+ int  uid;
+ int  gid;
+ int  permission;
+ 
+ 
+ int  siblingnext;
+ int  childroot;
+};
+ 
+ 
+int  NN;
+Node node[10001];
+ 
+ 
+int findUser(char userName[])
+{
+ for (int i = 0; i < userN; ++i)
+  if (mstrcmp(User[i], userName) == 0)
+   return i;
+ return -1;
+}
+ 
+ 
+int findGroup(char groupName[])
+{
+ for (int i = 0; i < groupN; ++i)
+  if (mstrcmp(Group[i], groupName) == 0)
+   return i;
+ return -1;
+}
+ 
+ 
+int getWord(char path[], int p, char word[])
+{
+ int idx = 0;
+ 
+ 
+ while (path[p] != '\0' && path[p] != '/')
+ {
+  word[idx] = path[p];
+  ++idx; ++p;
+ }
+ 
+ 
+ word[idx] = '\0';
+ 
+ 
+ if (path[p] == '/') ++p;
+ 
+ 
+ return p;
+}
+ 
+ 
+int getWord2(char path[], int p, char word[])
+{
+ int idx = 0;
+ 
+ 
+ while (path[p] != '\0' && path[p] != '.')
+ {
+  word[idx] = path[p];
+  ++idx; ++p;
+ }
+ 
+ 
+ word[idx] = '\0';
+ 
+ 
+ if (path[p] == '.') ++p;
+ 
+ 
+ return p;
+}
+ 
+ 
+void init()
+{
+ mstrcpy(User[0], "admin");
+ mstrcpy(Group[0], "admin");
+ U2G[0] = 0;
+ 
+ 
+ node[0].type = 0;
+ node[0].Name[0] = '\0';
+ node[0].Ext[0] = '\0';
+ node[0].uid = 0;
+ node[0].gid = 0;
+ node[0].permission = 2;
+ node[0].siblingnext = 0;
+ node[0].childroot = 0;
+ 
+ 
+ userN = groupN = NN = 1;
+}
+ 
+ 
+void createUser(char userName[], char groupName[])
+{
+ mstrcpy(User[userN], userName);
+ 
+ 
+ int gid = findGroup(groupName);
+ if (gid == -1)
+ {
+  mstrcpy(Group[groupN], groupName);
+  gid = groupN++;
+ }
+ 
+ 
+ U2G[userN++] = gid;
+}
+ 
+ 
+int createDirectory(char userName[], char path[], char directoryName[], int permission)
+{
+ int uid = findUser(userName);
+ int gid = U2G[uid];
+ 
+ 
+ int cur = 0;
+ 
+ 
+ int p1 = 1;
+ while (path[p1] != '\0')
+ {
+  char word[8];
+  p1 = getWord(path, p1, word);
+ 
+ 
+  int p = node[cur].childroot;
+  while (p)
+  {
+   Node &node_c = node[p];
+   if (node_c.type == 0 && mstrcmp(node_c.Name, word) == 0)
+   {
+    cur = p;
+    if (node[cur].permission == 0 && node[cur].uid != uid)
+     return 0;
+    if (node[cur].permission == 1 && node[cur].gid != gid)
+     return 0;
+    break;
+   }
+   p = node[p].siblingnext;
+  }
+ }
+ 
+ 
+ node[NN].type = 0;
+ mstrcpy(node[NN].Name, directoryName);
+ node[NN].Ext[0] = '\0';
+ node[NN].uid = uid;
+ node[NN].gid = gid;
+ node[NN].permission = permission;
+ node[NN].childroot = 0;
+ node[NN].siblingnext = node[cur].childroot;
+ 
+ 
+ node[cur].childroot = NN++;
+ 
+ 
+    return 1;
+}
+ 
+ 
+ 
+ 
+int createFile(char userName[], char path[], char fileName[], char fileExt[])
+{
+ int uid = findUser(userName);
+ int gid = U2G[uid];
+ 
+ 
+ int cur = 0;
+ 
+ 
+ int p1 = 1;
+ while (path[p1] != '\0')
+ {
+  char word[8];
+  p1 = getWord(path, p1, word);
+ 
+ 
+  int p = node[cur].childroot;
+  while (p)
+  {
+   Node &node_c = node[p];
+   if (node_c.type == 0 && mstrcmp(node_c.Name, word) == 0)
+   {
+    cur = p;
+    if (node[cur].permission == 0 && node[cur].uid != uid)
+     return 0;
+    if (node[cur].permission == 1 && node[cur].gid != gid)
+     return 0;
+    break;
+   }
+   p = node[p].siblingnext;
+  }
+ }
+ 
+ 
+ node[NN].type = 1;
+ mstrcpy(node[NN].Name, fileName);
+ mstrcpy(node[NN].Ext, fileExt);
+ node[NN].uid = 0;
+ node[NN].gid = 0;
+ node[NN].permission = 2;
+ node[NN].childroot = 0;
+ node[NN].siblingnext = node[cur].childroot;
+ 
+ 
+ node[cur].childroot = NN++;
+ 
+ 
+    return 1;
+}
+ 
+ 
+int find(int uid, int gid, char pattern[], int p, int e, int cur)
+{
+ int ret = 0;
+ 
+ 
+ if (p == e)
+ {
+  char File[8], Ext[8];
+  p = getWord2(pattern, p, File);
+  mstrcpy(Ext, pattern + p);
+ 
+ 
+  if (File[0] == '*' && Ext[0] == '*')
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 1)
+     ++ret;
+    w = node[w].siblingnext;
+   }
+  }
+  else if (File[0] == '*')
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 1 && mstrcmp(node_c.Ext, Ext) == 0)
+     ++ret;
+    w = node[w].siblingnext;
+   }
+  }
+  else if (Ext[0] == '*')
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 1 && mstrcmp(node_c.Name, File) == 0)
+     ++ret;
+    w = node[w].siblingnext;
+   }
+  }
+  else
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 1 && mstrcmp(node_c.Name, File) == 0 && mstrcmp(node_c.Ext, Ext) == 0)
+    {
+     ++ret;
+     break;
+    }
+    w = node[w].siblingnext;
+   }
+  }
+  return ret;
+ }
+ else
+ {
+  char word[8];
+  p = getWord(pattern, p, word);
+ 
+ 
+  if (word[0] == '*')
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 0 && (node_c.permission == 2 ||
+      (node_c.permission == 0 && node_c.uid == uid) ||
+      (node_c.permission == 1 && node_c.gid == gid)))
+     ret += find(uid, gid, pattern, p, e, w);
+    w = node[w].siblingnext;
+   }
+  }
+  else
+  {
+   int w = node[cur].childroot;
+   while (w)
+   {
+    Node &node_c = node[w];
+    if (node_c.type == 0 && mstrcmp(node_c.Name, word) == 0)
+    {
+     if (node_c.permission == 0 && node_c.uid != uid)
+      break;
+     if (node_c.permission == 1 && node_c.gid != gid)
+      break;
+     ret = find(uid, gid, pattern, p, e, w);
+     break;
+    }
+    w = node[w].siblingnext;
+   }
+  }
+ 
+ 
+  return ret;
+ }
+ 
+ 
+ return 0;
+}
+ 
+ 
+int find(char userName[], char pattern[])
+{
+ int uid = findUser(userName);
+ int gid = U2G[uid];
+ 
+ 
+ int e = 0;
+ 
+ 
+ while (pattern[e] != '\0') ++e;
+ while (pattern[e] != '/') --e;
+ ++e;
+ 
+ 
+    int ret = find(uid, gid, pattern, 1, e, 0);
+ 
+ 
+ return ret;
+}
