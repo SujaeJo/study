@@ -1,0 +1,399 @@
+// The below commented functions are for your reference. If you want  
+// to use it, uncomment these functions. 
+/* 
+int mstrcmp(const char *a, const char *b) 
+{ 
+int i; 
+for (i = 0; a[i] != '\0'; ++i) if (a[i] != b[i]) return a[i] - b[i]; 
+return a[i] - b[i]; 
+} 
+ 
+void mstrcpy(char *dest, const char *src) 
+{ 
+int i = 0; 
+while (src[i] != '\0') { dest[i] = src[i]; i++; } 
+dest[i] = src[i]; 
+} 
+*/ 
+ 
+#define DEBUG 1 
+ 
+#if DEBUG 
+#include <assert.h> 
+#include <stdio.h> 
+#endif 
+ 
+const int kMaxCharacter = 28; 
+const int kMaxNode = 20 * 10000; 
+const int kMaxUser = 10001; 
+ 
+struct TRIE_NODE { 
+        int children[kMaxCharacter]; 
+        int gid; 
+        int uid; 
+        int permission; 
+#if DEBUG 
+        bool cleared; 
+#endif 
+        TRIE_NODE() { 
+                for (int i = 0; i < kMaxCharacter; i++) { 
+                        children[i] = 0; 
+                } 
+                gid = 0; 
+                uid = 0; 
+                permission = 0; 
+#if DEBUG 
+                cleared = true; 
+#endif 
+        } 
+        void clear() { 
+                for (int i = 0; i < kMaxCharacter; i++) { 
+                        children[i] = 0; 
+                } 
+                gid = 0; 
+                uid = 0; 
+                permission = 0; 
+#if DEBUG 
+                cleared = true; 
+#endif 
+        } 
+}; 
+ 
+TRIE_NODE trie_node[kMaxNode]; 
+ 
+int nid = 1; 
+int gid = 1; 
+TRIE_NODE* root_gid = NULL; 
+int uid = 1; 
+TRIE_NODE* root_uid = NULL; 
+TRIE_NODE* root_dir = NULL; 
+ 
+int gid_of_uid[kMaxUser]; 
+ 
+int malloc_node() { 
+        if (nid == kMaxNode) 
+                nid = 1; 
+#if DEBUG 
+        assert(trie_node[nid].cleared); 
+        trie_node[nid].cleared = false; 
+#endif 
+        return nid++; 
+} 
+ 
+int insert_gid(TRIE_NODE* root, const char* key) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; key[i] != '\0'; i++) 
+        { 
+                int index = key[i] - 'a'; 
+                if (!current->children[index]) 
+                        current->children[index] = malloc_node(); 
+ 
+                current = &(trie_node[current->children[index]]); 
+        } 
+ 
+        // mark last node as leaf 
+        if (!current->gid) { 
+                current->gid = gid++; 
+        } 
+#if DEBUG 
+        printf("Insert gid:%d\n", current->gid); 
+#endif 
+        return current->gid; 
+} 
+ 
+int search_gid(TRIE_NODE* root, const char* key) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; key[i] != '\0'; i++) 
+        { 
+                int index = key[i] - 'a'; 
+                if (!current->children[index]) 
+                        return 0; 
+ 
+                current = &(trie_node[current->children[index]]); 
+        } 
+ 
+        return current->gid; 
+} 
+ 
+int insert_uid(TRIE_NODE* root, const char* key) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; key[i] != '\0'; i++) 
+        { 
+                int index = key[i] - 'a'; 
+                if (!current->children[index]) 
+                        current->children[index] = malloc_node(); 
+ 
+                current = &(trie_node[current->children[index]]); 
+        } 
+ 
+        // mark last node as leaf 
+        if (!current->uid) { 
+                current->uid = uid++; 
+        } 
+#if DEBUG 
+        printf("Insert uid:%d\n", current->uid); 
+#endif 
+        return current->uid; 
+} 
+ 
+int search_uid(TRIE_NODE* root, const char* key) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; key[i] != '\0'; i++) 
+        { 
+                int index = key[i] - 'a'; 
+                if (!current->children[index]) 
+                        return 0; 
+ 
+                current = &(trie_node[current->children[index]]); 
+        } 
+ 
+        return current->uid; 
+} 
+ 
+int insert_directory(TRIE_NODE* root, const char* path, const char* directoryName, int uid, int gid, int permission) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; path[i] != '\0'; i++) 
+        { 
+                int index; 
+                switch (path[i]) { 
+                case '/': 
+                        index = kMaxCharacter - 2; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        switch (current->permission) { 
+                        case 1: 
+                                if (current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        case 0: 
+                                if (current->uid != uid || current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        default: 
+                                break; 
+                        } 
+                        break; 
+                case '.': 
+                        index = kMaxCharacter - 1; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        break; 
+                default: 
+                        index = path[i] - 'a'; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                } 
+        } 
+ 
+        for (int i = 0; directoryName[i] != '\0'; i++) 
+        { 
+                int index; 
+                switch (directoryName[i]) { 
+                case '/': 
+                        index = kMaxCharacter - 2; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        switch (current->permission) { 
+                        case 1: 
+                                if (current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        case 0: 
+                                if (current->uid != uid || current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        default: 
+                                break; 
+                        } 
+                        break; 
+                case '.': 
+                        index = kMaxCharacter - 1; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        break; 
+                default: 
+                        index = directoryName[i] - 'a'; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                } 
+        } 
+         
+        // mark last node as leaf 
+        current->children[kMaxCharacter - 2] = malloc_node(); // insert '/' root node 
+        TRIE_NODE* slash = &(trie_node[current->children[kMaxCharacter - 2]]); 
+        slash->uid = uid; 
+        slash->gid = gid; 
+        slash->permission = permission; 
+         
+        return 1; 
+} 
+ 
+int search_directory(TRIE_NODE* root, const char* path, const char* directoryName, int uid, int gid, int permission) 
+{ 
+        TRIE_NODE* current = root; 
+ 
+        for (int i = 0; path[i] != '\0'; i++) 
+        { 
+                int index; 
+                switch (path[i]) { 
+                case '/': 
+                        index = kMaxCharacter - 2; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        switch (current->permission) { 
+                        case 1: 
+                                if (current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        case 0: 
+                                if (current->uid != uid || current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        default: 
+                                break; 
+                        } 
+                        break; 
+                case '.': 
+                        index = kMaxCharacter - 1; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        break; 
+                default: 
+                        index = path[i] - 'a'; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                } 
+        } 
+ 
+        for (int i = 0; directoryName[i] != '\0'; i++) 
+        { 
+                int index; 
+                switch (directoryName[i]) { 
+                case '/': 
+                        index = kMaxCharacter - 2; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        switch (current->permission) { 
+                        case 1: 
+                                if (current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        case 0: 
+                                if (current->uid != uid || current->gid != gid) { 
+                                        return 0; 
+                                } 
+                                break; 
+                        default: 
+                                break; 
+                        } 
+                        break; 
+                case '.': 
+                        index = kMaxCharacter - 1; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                        break; 
+                default: 
+                        index = directoryName[i] - 'a'; 
+                        if (!current->children[index]) 
+                                current->children[index] = malloc_node(); 
+ 
+                        current = &(trie_node[current->children[index]]); 
+                } 
+        } 
+         
+        // mark last node as leaf 
+        current->uid = uid; 
+        current->gid = gid; 
+        current->permission = permission; 
+         
+        return 1; 
+} 
+void init() 
+{ 
+        for (int i = 0; i < kMaxNode; i++) { 
+                trie_node[i].clear(); 
+        } 
+ 
+        for (int i = 0; i < kMaxUser; i++) { 
+                gid_of_uid[i] = 0; 
+        } 
+         
+        nid = 1; 
+        gid = 1; 
+        uid = 1; 
+        root_uid = &(trie_node[malloc_node()]); 
+        root_gid = &(trie_node[malloc_node()]); 
+        root_dir = &(trie_node[malloc_node()]); 
+        int admin_uid = insert_uid(root_uid, "admin"); 
+        int admin_gid = insert_gid(root_gid, "admin"); 
+        gid_of_uid[admin_uid] = admin_gid; 
+        root_dir->children[kMaxCharacter - 2] = malloc_node(); // insert '/' root node 
+        TRIE_NODE* root_path = &(trie_node[root_dir->children[kMaxCharacter - 2]]); 
+        root_path->uid = admin_uid; 
+        root_path->gid = admin_gid; 
+        root_path->permission = 2; 
+} 
+ 
+void createUser(char userName[], char groupName[]) 
+{ 
+        int uid = insert_uid(root_uid, userName); 
+        int gid = insert_gid(root_gid, groupName); 
+        gid_of_uid[uid] = gid; 
+} 
+ 
+int createDirectory(char userName[], char path[], char directoryName[], int permission) 
+{ 
+        int uid = search_uid(root_uid, userName); 
+        int gid = gid_of_uid[uid]; 
+        return insert_directory(root_dir, path, directoryName, uid, gid, permission); 
+} 
+ 
+ 
+int createFile(char userName[], char path[], char fileName[], char fileExt[]) 
+{ 
+        return 0; 
+} 
+ 
+int find(char userName[], char pattern[]) 
+{ 
+        return 0; 
+} 
