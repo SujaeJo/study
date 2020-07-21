@@ -1,0 +1,369 @@
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include <stdio.h>
+
+typedef enum {
+	INIT,
+	ADD,
+	DELETE,
+	CHANGE,
+	GETCOUNT
+} COMMAND;
+
+extern void init();
+extern void addEvent(int uid, char ename[], int groupid);
+extern int deleteEvent(int uid, char ename[]);
+extern int changeEvent(int uid, char ename[], char cname[]);
+extern int getCount(int uid);
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+static int mSeed;
+static int pseudo_rand(void)
+{
+	mSeed = mSeed * 431345 + 2531999;
+	return mSeed & 0x7FFFFFFF;
+}
+
+static void make_string(char str[], int seed)
+{
+	mSeed = seed;
+	int length = 5 + pseudo_rand() % 10;
+	for (int i = 0; i < length; ++i) {
+		str[i] = 'a' + pseudo_rand() % 26;
+	}
+	str[length] = 0;
+}
+
+static int run()
+{
+	int answer = 100;
+
+	int cmd, p1, p2, p3, p4;
+	char str1[15], str2[15];
+
+	int N, ret, flag;
+	scanf("%d %d %d", &cmd, &N, &flag);
+
+	init();
+
+	for (int i = 1; i < N; ++i) {
+		scanf("%d", &cmd);
+		switch (cmd) {
+		case ADD:
+			if (flag == 1) {
+				scanf("%d %s %d", &p1, str1, &p3);
+			}
+			else {
+				scanf("%d %d %d", &p1, &p2, &p3);
+				make_string(str1, p2);
+			}
+			addEvent(p1, str1, p3);
+			break;
+
+		case DELETE:
+			if (flag == 1) {
+				scanf("%d %s %d", &p1, str1, &p3);
+			}
+			else {
+				scanf("%d %d %d", &p1, &p2, &p3);
+				make_string(str1, p2);
+			}
+			ret = deleteEvent(p1, str1);
+			if (ret != p3)
+				answer = 0;
+			break;
+
+		case CHANGE:
+			if (flag == 1) {
+				scanf("%d %s %s %d", &p1, str1, str2, &p4);
+			}
+			else {
+				scanf("%d %d %d %d", &p1, &p2, &p3, &p4);
+				make_string(str1, p2);
+				make_string(str2, p3);
+			}
+			ret = changeEvent(p1, str1, str2);
+			if (ret != p4)
+				answer = 0;
+			break;
+
+		case GETCOUNT:
+			scanf("%d %d", &p1, &p2);
+			ret = getCount(p1);
+			if (ret != p2)
+				answer = 0;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	return answer;
+}
+
+int main()
+{
+	setbuf(stdout, NULL);
+	//freopen("sample_input.txt", "r", stdin);
+
+	int T;
+	scanf("%d", &T);
+
+	for (int tc = 1; tc <= T; tc++) {
+		printf("#%d %d\n", tc, run());
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+#define MAX_USER 1000
+#define MAX_GROUP 100
+
+#define MAX_NAME 16
+#define MAX_TABLE 400
+
+
+typedef struct
+{
+    char key[MAX_NAME];
+    int groupid;
+    int users[5];
+}Hash;
+
+struct user_t {
+    Hash tb[MAX_TABLE];
+    int event_cnt;
+}USER[MAX_USER];
+
+struct group_t {
+    Hash tb[MAX_TABLE];
+}GROUP[MAX_GROUP];
+
+void mstrcpy(char dst[], const char src[]) {
+    int c = 0;
+    while ((dst[c] = src[c]) != 0) ++c;
+}
+
+int mstrcmp(const char str1[], const char str2[]) {
+    int c = 0;
+    while (str1[c] != 0 && str1[c] == str2[c]) ++c;
+    return str1[c] - str2[c];
+}
+
+unsigned long hash(const char* str)
+{
+	  //printf("@@@ hash() - str:%s\n", str);
+    unsigned long hash = 5381;
+    int c;
+
+    while (c = *str++)
+    {
+			  unsigned long tmpHash = hash << 5;
+			  //printf("@@@ hash() - c:%lu, tmpHash:%lu, hash:%lu\n", c, tmpHash, hash);
+        hash = (((hash << 5) + hash) + c) % MAX_TABLE;
+    }
+    //printf("@@@ hash() - return[%lu]\n", hash % MAX_TABLE);
+    return hash % MAX_TABLE;
+}
+
+int find(Hash* tb, const char* key)
+{
+	  ///printf("find() - key[%s]\n", key);
+    unsigned long h = hash(key);
+    int cnt = MAX_TABLE;
+    //printf("find() - h[%d]\n", h);
+    while (tb[h].key[0] != 0 && cnt--)
+    {
+        if (mstrcmp(tb[h].key, key) == 0)
+        {
+					  //printf("find() - return h[%d]\n", h);
+            return h;
+        }
+        h = (h + 1) % MAX_TABLE;
+    }
+    return h;
+}
+
+int add(int uid, char* name, int groupid)
+{
+	  //printf("add() - uid[%d], name[%s], groupid[%d]\n", uid, name, groupid);
+    //user_t* user = &USER[uid];
+    //group_t* group = &GROUP[groupid];
+
+    int idx = find(USER[uid].tb, name);
+    //printf("add() - User idx:%d\n", idx);
+    mstrcpy(USER[uid].tb[idx].key, name);
+    USER[uid].tb[idx].groupid = groupid;
+
+    idx = find(GROUP[groupid].tb, name);
+		//printf("add() - Group idx:%d\n", idx);
+    mstrcpy(GROUP[groupid].tb[idx].key, name);
+
+    for (int i = 0; i < 5; i++)
+    {
+			  //printf("add() - i:%d, %d\n", i, GROUP[groupid].tb[idx].users[i]);
+        if (GROUP[groupid].tb[idx].users[i] == -1)
+        {
+					  //printf("add() - set uid[%d], and break!\n", uid);
+            GROUP[groupid].tb[idx].users[i] = uid;
+            break;
+        }
+    }
+    USER[uid].event_cnt += 1;
+    //printf("add() - return!\n");
+    return 1;
+}
+
+
+void init()
+{
+	  //printf("@@@ [begin] init!\n");
+    int i, j, k;
+
+    for (i = 0; i < MAX_USER; i++)
+    {
+        USER[i].event_cnt = 0;
+
+        for (j = 0; j < MAX_TABLE; j++)
+        {
+            USER[i].tb[j].groupid = -1;
+
+            for (k = 0; k < MAX_NAME; k++)
+            {
+                USER[i].tb[j].key[k] = 0;
+            }
+        }
+    }
+
+    for (i = 0; i < MAX_GROUP; i++)
+    {
+        for (j = 0; j < MAX_TABLE; j++)
+        {
+            for (k = 0; k < MAX_NAME; k++)
+            {
+                GROUP[i].tb[j].key[k] = 0;
+            }
+
+            for (k = 0; k < 5; k++)
+            {
+                GROUP[i].tb[j].users[k] = -1;
+            }
+        }
+    }
+		///printf("@@@ [end] init!\n");
+}
+
+void addEvent(int uid, char ename[], int groupid)
+{
+	  //printf("@@@ [begin] addEvent!\n");
+    add(uid, ename, groupid);
+		//printf("@@@ [end] addEvent!\n");
+}
+
+int deleteEvent(int uid, char ename[])
+{
+	  //printf("@@@ [begin] deleteEvent! - uid[%d], ename[%s]\n", uid, ename);
+    user_t* user = &USER[uid];
+    int event_idx = find(user->tb, ename);
+    int groupid = user->tb[event_idx].groupid;
+    group_t* group = &GROUP[groupid];
+
+    int del_cnt = 0;
+
+    event_idx = find(group->tb, ename);
+    if (group->tb[event_idx].users[0] == uid) // master
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            if (group->tb[event_idx].users[i] != -1)
+            {
+                int id = group->tb[event_idx].users[i];
+                group->tb[event_idx].users[i] = -1;
+                USER[id].event_cnt -= 1;
+                del_cnt++;
+            }
+        }
+    }
+    else // NOT master
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            if (group->tb[event_idx].users[i] == uid)
+            {
+                group->tb[event_idx].users[i] = -1;
+                user->event_cnt -= 1;
+                del_cnt++;
+            }
+        }
+    }
+    //printf("@@@ [end] deleteEvent! - del_cnt:%d\n", del_cnt);
+    return del_cnt;
+}
+
+int changeEvent(int uid, char ename[], char cname[])
+{
+	  //printf("@@@ [begin] changeEvent! - uid[%d], ename[%s], cname[%s]\n", uid, ename, cname);
+    //user_t* user = &USER[uid];
+    int event_idx = find(USER[uid].tb, ename);
+    int groupid = USER[uid].tb[event_idx].groupid;
+    //group_t* group = &GROUP[groupid];
+
+    int del_cnt = 0;
+
+    event_idx = find(GROUP[groupid].tb, ename);
+    if (GROUP[groupid].tb[event_idx].users[0] == uid) // master
+    {
+			  //printf("changeEvent() - master!\n");
+        for (int i = 0; i < 5; i++)
+        {
+					  //printf("changeEvent() - i[%d], %d\n", i, GROUP[groupid].tb[event_idx].users[i]);
+            if (GROUP[groupid].tb[event_idx].users[i] != -1) // found!
+            {
+							  //printf("changeEvent() - exist!\n");
+                int id = GROUP[groupid].tb[event_idx].users[i];
+								//printf("changeEvent() - id:%d\n", id);
+                GROUP[groupid].tb[event_idx].users[i] = -1;
+                USER[id].event_cnt -= 1;
+
+                add(id, cname, groupid);
+
+                del_cnt++;
+            }
+        }
+    }
+    else // not master
+    {
+			  //printf("changeEvent() - NOT master!\n");
+        for (int i = 0; i < 5; i++)
+        {
+					  //printf("changeEvent() - i[%d], %d\n", i, GROUP[groupid].tb[event_idx].users[i]);
+            if (GROUP[groupid].tb[event_idx].users[i] == uid)
+            {
+                GROUP[groupid].tb[event_idx].users[i] = -1;
+                USER[uid].event_cnt -= 1;
+
+                add(uid, cname, groupid);
+
+                del_cnt++;
+            }
+        }
+    }
+    //printf("@@@ [end] changeEvent! - del_cnt:%d\n", del_cnt);
+    return del_cnt;
+}
+
+int getCount(int uid)
+{
+	  //printf("@@@ [begin] getCount! - uid:%d\n", uid);
+    return USER[uid].event_cnt;
+}
