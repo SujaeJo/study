@@ -1,0 +1,422 @@
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#include<stdio.h>
+
+extern void init(int n);
+extern int search(int mId, int searchTimestamp, char searchWord[11], char correctWord[5][11]);
+
+int n, m;
+char words[4000][11];
+
+static int mstrcmp(const char *a, const char *b)
+{
+	int i;
+	for (i = 0; a[i] != '\0'; i++)
+	{
+		if (a[i] != b[i])
+			return a[i] - b[i];
+	}
+	return a[i] - b[i];
+}
+
+void inputWords(int wordCnt) {
+	for (int i = 0; i < wordCnt; ++i) {
+		scanf("%s", words[i]);
+	}
+}
+
+bool run(int m) {
+
+	bool accepted = true;
+
+	while (m--) {
+
+		int id, timestamp, correctWordN, answerWordN;
+		int wordIdx;
+		char correctWord[5][11] = { 0 };
+		char answerWord[5][11] = { 0 };
+
+		scanf("%d%d%d", &id, &timestamp, &wordIdx);
+
+		correctWordN = search(id, timestamp, words[wordIdx], correctWord);
+
+		scanf("%d", &answerWordN);
+    printf("correctWordN[%d], answerWordN[%d]\n", correctWordN, answerWordN);
+		for (int i = 0; i < answerWordN; ++i) {
+			scanf("%s", answerWord[i]);
+		}
+
+		if (correctWordN != answerWordN) {
+			accepted = false;
+		}
+		else {
+			for (int i = 0; i < answerWordN; ++i) {
+				bool isExist = false;
+
+				for (int j = 0; j < correctWordN; ++j) {
+					printf("correctWordN[%d], answerWord[%s], correctWord[%s]\n", correctWordN, answerWord[i], answerWord[j]);
+					if (mstrcmp(answerWord[i], correctWord[j]) == 0) {
+						isExist = true;
+					}
+				}
+        printf("isExist:%d, accepted:%d\n\n\n", isExist, accepted);
+				if (!isExist) {
+					accepted = false;
+				}
+			}
+		}
+	}
+  printf("accepted:%d\n\n\n", accepted);
+	return accepted;
+}
+
+int main(void) {
+
+	int test, T;
+	int wordCnt;
+
+	// freopen("sample_input.txt", "r", stdin);
+
+	setbuf(stdout, NULL);
+
+	scanf("%d", &T);
+
+	for (test = 1; test <= T; ++test) {
+
+		scanf("%d", &wordCnt);
+
+		inputWords(wordCnt);
+
+		scanf("%d%d", &n, &m);
+
+		init(n);
+
+		if (run(m)) {
+			printf("#%d 100\n", test);
+		}
+		else {
+			printf("#%d 0\n", test);
+		}
+	}
+
+	return 0;
+}
+
+
+
+typedef struct
+{
+	int mId;
+	int searchTimestamp;
+	char searchWord[11];
+}information;
+
+typedef struct
+{
+	char correct_word[11];
+	char typo_word[11];
+	int search_user[5];
+	int search_user_cnt;
+	bool isDB;
+}candidate;
+
+candidate candidate_[100];
+int candidate_cnt = 0;
+
+information info_[100];
+int info_cnt = 0;
+
+// The below commented functions are for your reference. If you want
+// to use it, uncomment these functions.
+
+/*
+int mstrncmp(const char *a, const char *b, int len)
+{
+	for (int i = 0; i < len; i++)
+	{
+		if (a[i] != b[i])
+			return a[i] - b[i];
+	}
+	return 0;
+}
+*/
+int mstrlen(const char *a)
+{
+	int len = 0;
+
+	while (a[len] != '\0')
+		len++;
+
+	return len;
+}
+
+void mstrcpy(char *dest, const char *src)
+{
+	int i = 0;
+	while (src[i] != '\0')
+	{
+		dest[i] = src[i];
+		i++;
+	}
+	dest[i] = src[i];
+}
+
+void mstrncpy(char *dest, const char *src, int len)
+{
+	for (int i = 0; i<len; i++)
+	{
+		dest[i] = src[i];
+	}
+	dest[len] = '\0';
+}
+
+
+void init(int n) {
+	printf("@@@ init!!! - n:%d\n", n);
+	int i,j;
+  for (i =0; i<100; i++)
+	{
+		for (j=0; j<11; j++)
+		{
+			candidate_[i].correct_word[j] = 0;
+			candidate_[i].typo_word[j] = 0;
+		}
+		for (j = 0; j<5; j++)
+		{
+			candidate_[i].search_user[j] = 0;
+		}
+		candidate_[i].search_user_cnt = 0;
+		candidate_[i].isDB = 0;
+
+    info_[i].mId = 0;
+		info_[i].searchTimestamp = 0;
+		for (j = 0; j<11; j++)
+		{
+			info_[i].searchWord[j] = 0;
+		}
+	}
+	candidate_cnt = 0;
+}
+
+
+int compare(int mId, char searchWord_table[11], char searchWord[11], char correctWord[5][11])
+{
+	printf("@@@ compare! - mId[%d], searchWord_table[%s], searchWord[%s]\n", mId, searchWord_table, searchWord);
+  int status = 0;
+	int i=0;
+  int result = 0;
+
+	int len_searchWord_table = mstrlen(searchWord_table);
+	int len_searchWord = mstrlen(searchWord);
+  printf("len_searchWord[%d], len_searchWord_table[%d]\n", len_searchWord, len_searchWord_table);
+	if (len_searchWord_table == len_searchWord) // substitution check
+	{
+		printf("substitution check!\n");
+		int temp_substitution = 0;
+    for (i =0; i<len_searchWord; i++)
+		{
+      if (searchWord_table[i] != searchWord[i])
+			{
+				temp_substitution++;
+			}
+		}
+		if (temp_substitution == 1) // only one character is different...
+		{
+			status++;
+		}
+	}
+	if (len_searchWord_table == len_searchWord + 1) // addition check
+	{
+		printf("addition check!\n");
+		int j = 0;
+		bool diff_detected = false;
+		int temp_addition = 0;
+    for (i=0; i<len_searchWord_table;i++)
+	  {
+			if (diff_detected)
+			{
+				j = i - 1;
+			}
+			else
+			{
+				j = i;
+			}
+	    if (searchWord_table[i] != searchWord[j])
+			{
+        diff_detected = true;
+				temp_addition++;
+			}
+		}
+		if (temp_addition == 1)
+		{
+			status++;
+		}
+	}
+	if (len_searchWord_table + 1 == len_searchWord) // deletion check
+	{
+		printf("deletion check!\n");
+		int j = 0;
+	  bool diff_detected = false;
+		int temp_deletion = 0;
+		for (i=0; i<len_searchWord;i++)
+	  {
+		  if (diff_detected)
+		  {
+			  j = i - 1;
+		  }
+		  else
+		  {
+			  j = i;
+		  }
+		  if (searchWord_table[j] != searchWord[i])
+		  {
+				diff_detected = true;
+				temp_deletion++;
+		  }
+	  }
+		if (temp_deletion == 1)
+		{
+			status++;
+		}
+	}
+
+	printf("status[%d]\n", status);
+	if (status == 1)
+	{
+		printf("candidate_cnt[%d]\n", candidate_cnt);
+		//int temp_candidate_cnt = candidate_cnt+1;
+		//bool duplicate_typo = false;
+		bool skipToAddList = false;
+		for (i=0;i<candidate_cnt;i++)
+		{
+			printf("i[%d]\n", i);
+
+			if (mstrcmp(candidate_[i].typo_word, searchWord_table) == 0) // existing type...
+			{
+
+				for(int a=0; a<5; a++)
+				{
+					printf("candidate_[%d].search_user[%d]:%d\n", i, a, candidate_[i].search_user[a]);
+					printf("mId:%d\n", mId);
+					if (candidate_[i].search_user[a] == mId)
+					{
+            printf("i[%d], a[%d], Id is same! skip to add list ...\n", i, a);
+						skipToAddList = true;
+						break;
+					}
+					else if (candidate_[i].search_user[a] == 0)
+					{
+						candidate_[i].search_user[a] = mId;
+						candidate_[i].search_user_cnt++;
+						if (candidate_[i].search_user_cnt > 2)
+						{
+							candidate_[i].isDB = true;
+						}
+            skipToAddList = true;
+						break;
+					}
+				}
+				/*
+				if(!isSameUser)
+				{
+					printf("i[%d], typo is exist...!\n", i);
+	        duplicate_typo = true;
+					//candidate_[i].search_user_cnt++;
+				}
+				*/
+			}
+		}
+
+		if (!skipToAddList)
+		{
+			printf("add to candidate list!\n");
+			mstrcpy(candidate_[candidate_cnt].correct_word, searchWord);
+			mstrcpy(candidate_[candidate_cnt].typo_word, searchWord_table);
+			candidate_[candidate_cnt].search_user[candidate_[candidate_cnt].search_user_cnt] = mId;
+			candidate_[candidate_cnt].search_user_cnt++;
+			candidate_cnt++;
+		}
+
+		for (int a=0;a<candidate_cnt;a++)
+		{
+			printf("[%d] - candidate list!\n", a);
+			printf("typo_word:%s\n", candidate_[a].typo_word);
+			printf("correct_word:%s\n", candidate_[a].correct_word);
+			printf("search_user0:%d\n", candidate_[a].search_user[0]);
+			printf("search_user1:%d\n", candidate_[a].search_user[1]);
+			printf("search_user2:%d\n", candidate_[a].search_user[2]);
+			printf("search_user3:%d\n", candidate_[a].search_user[3]);
+			printf("search_user4:%d\n", candidate_[a].search_user[4]);
+			printf("search_user_cnt:%d\n", candidate_[a].search_user_cnt);
+			printf("isDB:%d\n", candidate_[a].isDB);
+		}
+
+	}
+
+  return result;
+
+}
+
+int search(int mId, int searchTimestamp, char searchWord[11], char correctWord[5][11]) {
+  printf("@@@ search![%d] - mId[%d], searchTimestamp[%d], searchWord[%s], info_cnt[%d]\n", info_cnt+1, mId, searchTimestamp, searchWord, info_cnt);
+
+	info_[info_cnt].mId = mId;
+  info_[info_cnt].searchTimestamp = searchTimestamp;
+	mstrcpy(info_[info_cnt].searchWord, searchWord);
+  info_cnt++;
+
+  int i, j, result = 0;
+
+  // isDB check
+	for (i=0;i<candidate_cnt;i++)
+	{
+		if (candidate_[i].isDB)
+		{
+      printf("isDB check! - i[%d]\n", i);
+			for (j=0;j<5;j++)
+			{
+				printf("isDB check! - correctWord[%d]:%s\n", j, correctWord[j]);
+        if(correctWord[j][0] == 0)
+				{
+				  mstrcpy(correctWord[j], candidate_[i].correct_word);
+					result++;
+					printf("copy to correctWord! - j[%d], result[%d]\n", j, result);
+				  break;
+			  }
+			}
+		}
+	}
+
+  for (i=0; i<info_cnt-1; i++)
+	{
+		printf("i[%d], mId[%d], searchTimestamp[%d], searchWord[%s]\n", i, info_[i].mId, info_[i].searchTimestamp, info_[i].searchWord);
+		if (searchTimestamp - info_[i].searchTimestamp > 10)
+		{
+			printf("time diff is over 10, so skip!\n");
+			continue;
+		}
+		else
+		{
+			if ((info_[i].mId != mId))
+			{
+				printf("mId is not same\n");
+        continue;
+			}
+			else
+			{
+				printf("found! - i[%d]\n", i);
+				result = compare(info_[i].mId, info_[i].searchWord, searchWord, correctWord);
+			}
+		}
+	}
+
+	for (i=0;i<5;i++)
+	{
+		printf("correctWord[%d]:%s\n", i, correctWord[i]);
+	}
+
+  printf("@@@ search! - return %d\n\n\n", result);
+	return result;
+}
