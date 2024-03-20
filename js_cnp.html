@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<p>Click on the button to copy the text from the text field. Try to paste the text (e.g. ctrl+v) afterwards in a different window, to see the effect.</p>
+
+<button onclick="CheckFunction()">Check Permission</button></br></br>
+
+
+<input type="text" value="Hello World" id="inInput">
+<button onclick="copyFunction()">Copy text</button></br></br>
+
+
+<input type="text" value="" id="outInput">
+<button onclick="pasteFunction()">Paste text</button>
+
+<script>
+async function permissionsCheck() {
+    const read = await navigator.permissions.query({
+        name: 'clipboard-read',
+    });
+    const write = await navigator.permissions.query({
+        name: 'clipboard-write',
+    });
+    
+    return write.state === 'granted' && read.state !== 'denied';
+}
+
+async function CheckFunction() {
+    try {
+        const hasPermissions = await permissionsCheck();
+
+        if (!hasPermissions) {
+            alert('NOT ALLOWED');
+        }
+        else
+           alert('ALLOWED');
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+async function copyFunction() {
+// Get the text field
+  var copyText = document.getElementById("inInput");
+
+  // Select the text field
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); // For mobile devices
+
+  // Copy the text inside the text field
+  navigator.clipboard.writeText(copyText.value);
+  
+  // Alert the copied text
+  //alert("Copied the text: " + copyText.value);
+
+}
+
+async function pasteFunction() { 
+ document.getElementById("outInput").focus();
+ 
+ // Copy the text inside the text field 
+ const text = await navigator.clipboard.readText();
+ document.getElementById("outInput").value = text;
+
+  // Alert the paste text
+  alert("paste the text: " + text);
+}
+
+</script>
+
+</body>
+</html>
