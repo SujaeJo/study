@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Iframe Example</title>
+	<meta http-equiv="Content-Security-Policy" content="frame-src 'self';">
+    <script type="text/javascript">
+        function createIframe1() {
+            var iframe = document.createElement('iframe');
+            iframe.src = 'about:blank';
+            document.body.appendChild(iframe);
+        }
+        function createIframe2() {
+            var iframe = document.createElement('iframe');
+            iframe.src = 'about:srcdoc';
+            document.body.appendChild(iframe);
+        }
+    </script>
+</head>
+<body>
+    <h1>Iframe Example</h1>
+    <button onclick="createIframe1()">Create Iframe-blank</button>
+    <button onclick="createIframe2()">Create Iframe-srcdoc</button>
+</body>
+</html>
