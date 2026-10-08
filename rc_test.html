@@ -256,6 +256,14 @@
             color: #667eea;
         }
 
+        .device-highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
         .scroll-hint {
             text-align: center;
             color: #999;
@@ -295,11 +303,11 @@
                     <span style="color: #999;">키 입력 대기 중...</span>
                 </div>
                 <div class="device-info">
-                    <strong>감지할 이벤트:</strong>
+                    <strong>감지할 속성:</strong>
                     <ul style="margin-left: 20px; margin-top: 8px;">
+                        <li>inputDevice / deviceName / device</li>
                         <li>keydown, keyup</li>
                         <li>Key Code, Key Name</li>
-                        <li>Modifier 상태 (Ctrl, Shift, Alt)</li>
                     </ul>
                 </div>
             </div>
@@ -310,12 +318,11 @@
                     <span style="color: #999;">마우스 이벤트 대기 중...</span>
                 </div>
                 <div class="device-info">
-                    <strong>감지할 이벤트:</strong>
+                    <strong>감지할 속성:</strong>
                     <ul style="margin-left: 20px; margin-top: 8px;">
-                        <li>mousedown, mouseup, mousemove</li>
-                        <li>wheel (마우스 휠)</li>
+                        <li>inputDevice / deviceName / device</li>
+                        <li>mousedown, mouseup, mousemove, wheel</li>
                         <li>mouseenter, mouseleave</li>
-                        <li>클릭 좌표 (X, Y)</li>
                     </ul>
                 </div>
             </div>
@@ -329,10 +336,10 @@
                     손가락/스타일러스로 터치하세요
                 </div>
                 <div class="device-info">
-                    <strong>감지할 이벤트:</strong>
+                    <strong>감지할 속성:</strong>
                     <ul style="margin-left: 20px; margin-top: 8px;">
+                        <li>inputDevice / deviceName / device</li>
                         <li>touchstart, touchmove, touchend</li>
-                        <li>터치 포인트 좌표</li>
                         <li>다중 터치 지원</li>
                     </ul>
                 </div>
@@ -344,12 +351,11 @@
                     <span style="color: #999;">포인터 이벤트 대기 중...</span>
                 </div>
                 <div class="device-info">
-                    <strong>감지할 이벤트:</strong>
+                    <strong>감지할 속성:</strong>
                     <ul style="margin-left: 20px; margin-top: 8px;">
+                        <li>inputDevice / deviceName / device</li>
                         <li>pointerdown, pointerup, pointermove</li>
-                        <li>pointerenter, pointerleave</li>
                         <li>포인터 타입 (touch, mouse, pen)</li>
-                        <li>Device Name (Jelly 등)</li>
                     </ul>
                 </div>
             </div>
@@ -377,6 +383,11 @@
             touch: 0,
             pointer: 0
         };
+
+        // 입력 장치 이름 추출 (inputDevice > deviceName > device 순서로 우선순위)
+        function getInputDevice(event) {
+            return event.inputDevice || event.deviceName || event.device || null;
+        }
 
         function addLog(type, message) {
             const timestamp = new Date().toLocaleTimeString('ko-KR', {
@@ -445,6 +456,10 @@
 
         // 키 이벤트
         document.addEventListener('keydown', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> keydown<br>
 <strong>Key:</strong> ${e.key}<br>
@@ -452,75 +467,97 @@
 <strong>KeyCode:</strong> ${e.keyCode}<br>
 <strong>Ctrl:</strong> ${e.ctrlKey} | <strong>Shift:</strong> ${e.shiftKey} | <strong>Alt:</strong> ${e.altKey} | <strong>Meta:</strong> ${e.metaKey}<br>
 <strong>Repeat:</strong> ${e.repeat}<br>
-<strong>Device Name:</strong> ${e.deviceName || 'N/A'}
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('keyEvent', info);
-            addLog('key', `keydown: key="${e.key}" code="${e.code}" keyCode=${e.keyCode}`);
+            addLog('key', `keydown: key="${e.key}" code="${e.code}" keyCode=${e.keyCode} ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('keyup', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> keyup<br>
 <strong>Key:</strong> ${e.key}<br>
 <strong>Code:</strong> ${e.code}<br>
 <strong>KeyCode:</strong> ${e.keyCode}<br>
-<strong>Ctrl:</strong> ${e.ctrlKey} | <strong>Shift:</strong> ${e.shiftKey} | <strong>Alt:</strong> ${e.altKey} | <strong>Meta:</strong> ${e.metaKey}
+<strong>Ctrl:</strong> ${e.ctrlKey} | <strong>Shift:</strong> ${e.shiftKey} | <strong>Alt:</strong> ${e.altKey} | <strong>Meta:</strong> ${e.metaKey}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('keyEvent', info);
-            addLog('key', `keyup: key="${e.key}" code="${e.code}"`);
+            addLog('key', `keyup: key="${e.key}" code="${e.code}" ${device ? `[Device: ${device}]` : ''}`);
         });
 
         // 마우스 이벤트
         document.addEventListener('mousedown', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> mousedown<br>
 <strong>Button:</strong> ${e.button === 0 ? 'LEFT' : e.button === 1 ? 'MIDDLE' : e.button === 2 ? 'RIGHT' : e.button}<br>
 <strong>Position:</strong> (${e.clientX}, ${e.clientY})<br>
 <strong>Page Position:</strong> (${e.pageX}, ${e.pageY})<br>
 <strong>Buttons:</strong> ${e.buttons}<br>
-<strong>Device Name:</strong> ${e.deviceName || 'N/A'}
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('mouseEvent', info);
-            addLog('mouse', `mousedown: button=${e.button} at (${e.clientX}, ${e.clientY})`);
+            addLog('mouse', `mousedown: button=${e.button} at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('mouseup', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> mouseup<br>
 <strong>Button:</strong> ${e.button === 0 ? 'LEFT' : e.button === 1 ? 'MIDDLE' : e.button === 2 ? 'RIGHT' : e.button}<br>
 <strong>Position:</strong> (${e.clientX}, ${e.clientY})<br>
-<strong>Click Count:</strong> ${e.detail}
+<strong>Click Count:</strong> ${e.detail}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('mouseEvent', info);
-            addLog('mouse', `mouseup: button=${e.button} at (${e.clientX}, ${e.clientY})`);
+            addLog('mouse', `mouseup: button=${e.button} at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('mousemove', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> mousemove<br>
 <strong>Position:</strong> (${e.clientX}, ${e.clientY})<br>
 <strong>Page Position:</strong> (${e.pageX}, ${e.pageY})<br>
 <strong>Buttons:</strong> ${e.buttons}<br>
-<strong>Device Name:</strong> ${e.deviceName || 'N/A'}
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('mouseEvent', info);
-            // mousemove는 로그에 너무 많이 들어가므로 필터링
             if (Math.random() > 0.95) {
-                addLog('mouse', `mousemove: at (${e.clientX}, ${e.clientY})`);
+                addLog('mouse', `mousemove: at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
             }
         });
 
         document.addEventListener('wheel', (e) => {
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> wheel<br>
 <strong>DeltaX:</strong> ${e.deltaX}<br>
 <strong>DeltaY:</strong> ${e.deltaY}<br>
 <strong>DeltaZ:</strong> ${e.deltaZ}<br>
 <strong>DeltaMode:</strong> ${e.deltaMode === 0 ? 'PIXELS' : e.deltaMode === 1 ? 'LINES' : 'PAGES'}<br>
-<strong>Position:</strong> (${e.clientX}, ${e.clientY})
+<strong>Position:</strong> (${e.clientX}, ${e.clientY})<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('mouseEvent', info);
-            addLog('mouse', `wheel: deltaY=${e.deltaY} at (${e.clientX}, ${e.clientY})`);
+            addLog('mouse', `wheel: deltaY=${e.deltaY} at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('mouseenter', (e) => {
@@ -536,8 +573,12 @@
 
         document.addEventListener('touchstart', (e) => {
             touchpad.classList.add('active');
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const touches = Array.from(e.touches).map((t, i) =>
-                `Touch ${i}: (${Math.round(t.clientX)}, ${Math.round(t.clientY)}) - Device: ${t.identifier}`
+                `Touch ${i}: (${Math.round(t.clientX)}, ${Math.round(t.clientY)}) - ID: ${t.identifier}`
             ).join(' | ');
 
             const info = `
@@ -546,12 +587,11 @@
 ${Array.from(e.touches).map((t, i) =>
     `<strong>Touch ${i}:</strong> (${Math.round(t.clientX)}, ${Math.round(t.clientY)}) Radius: (${Math.round(t.radiusX)}, ${Math.round(t.radiusY)})`
 ).join('<br>')}<br>
-<strong>Device Name:</strong> ${e.deviceName || 'N/A'}
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('touchEvent', info);
-            addLog('touch', `touchstart: ${e.touches.length} touch(es) - ${touches}`);
+            addLog('touch', `touchstart: ${e.touches.length} touch(es) - ${touches} ${device ? `[Device: ${device}]` : ''}`);
 
-            // 터치 포인트 시각화
             Array.from(e.touches).forEach((touch, i) => {
                 const point = document.createElement('div');
                 point.className = 'touch-point';
@@ -564,6 +604,10 @@ ${Array.from(e.touches).map((t, i) =>
 
         document.addEventListener('touchmove', (e) => {
             e.preventDefault();
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const touches = Array.from(e.touches).map((t, i) =>
                 `Touch ${i}: (${Math.round(t.clientX)}, ${Math.round(t.clientY)})`
             ).join(' | ');
@@ -573,11 +617,11 @@ ${Array.from(e.touches).map((t, i) =>
 <strong>Touch Points:</strong> ${e.touches.length}<br>
 ${Array.from(e.touches).map((t, i) =>
     `<strong>Touch ${i}:</strong> (${Math.round(t.clientX)}, ${Math.round(t.clientY)})`
-).join('<br>')}
+).join('<br>')}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('touchEvent', info);
 
-            // 터치 포인트 위치 업데이트
             const points = document.querySelectorAll('.touch-point');
             Array.from(e.touches).forEach((touch, i) => {
                 if (points[i]) {
@@ -589,20 +633,25 @@ ${Array.from(e.touches).map((t, i) =>
 
         document.addEventListener('touchend', (e) => {
             touchpad.classList.remove('active');
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> touchend<br>
-<strong>Remaining Touches:</strong> ${e.touches.length}
+<strong>Remaining Touches:</strong> ${e.touches.length}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('touchEvent', info);
-            addLog('touch', `touchend: ${e.touches.length} remaining touch(es)`);
+            addLog('touch', `touchend: ${e.touches.length} remaining touch(es) ${device ? `[Device: ${device}]` : ''}`);
 
-            // 터치 포인트 제거
             document.querySelectorAll('.touch-point').forEach(point => point.remove());
         });
 
         document.addEventListener('touchcancel', (e) => {
             touchpad.classList.remove('active');
-            addLog('touch', `touchcancel: touch cancelled`);
+            const device = getInputDevice(e);
+            addLog('touch', `touchcancel: touch cancelled ${device ? `[Device: ${device}]` : ''}`);
             document.querySelectorAll('.touch-point').forEach(point => point.remove());
         });
 
@@ -611,6 +660,10 @@ ${Array.from(e.touches).map((t, i) =>
             const pointerType = e.pointerType === 'mouse' ? '🖱️ MOUSE' :
                                 e.pointerType === 'touch' ? '👆 TOUCH' :
                                 e.pointerType === 'pen' ? '✏️ PEN' : e.pointerType;
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> pointerdown<br>
 <strong>Pointer Type:</strong> ${pointerType}<br>
@@ -619,34 +672,44 @@ ${Array.from(e.touches).map((t, i) =>
 <strong>Pressure:</strong> ${e.pressure.toFixed(2)}<br>
 <strong>Width/Height:</strong> ${e.width}x${e.height}<br>
 <strong>Is Primary:</strong> ${e.isPrimary}<br>
-<strong>Device Name:</strong> ${e.deviceName || 'N/A'}
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('pointerEvent', info);
-            addLog('pointer', `pointerdown: ${pointerType} id=${e.pointerId} at (${e.clientX}, ${e.clientY})`);
+            addLog('pointer', `pointerdown: ${pointerType} id=${e.pointerId} at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('pointerup', (e) => {
             const pointerType = e.pointerType === 'mouse' ? '🖱️ MOUSE' :
                                 e.pointerType === 'touch' ? '👆 TOUCH' :
                                 e.pointerType === 'pen' ? '✏️ PEN' : e.pointerType;
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> pointerup<br>
 <strong>Pointer Type:</strong> ${pointerType}<br>
-<strong>Pointer ID:</strong> ${e.pointerId}
+<strong>Pointer ID:</strong> ${e.pointerId}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('pointerEvent', info);
-            addLog('pointer', `pointerup: ${pointerType} id=${e.pointerId} at (${e.clientX}, ${e.clientY})`);
+            addLog('pointer', `pointerup: ${pointerType} id=${e.pointerId} at (${e.clientX}, ${e.clientY}) ${device ? `[Device: ${device}]` : ''}`);
         });
 
         document.addEventListener('pointermove', (e) => {
             const pointerType = e.pointerType === 'mouse' ? '🖱️ MOUSE' :
                                 e.pointerType === 'touch' ? '👆 TOUCH' :
                                 e.pointerType === 'pen' ? '✏️ PEN' : e.pointerType;
+            const device = getInputDevice(e);
+            const deviceStr = device ?
+                `<span class="device-highlight">${device}</span>` :
+                '<span style="color: #999;">N/A</span>';
             const info = `
 <strong>Type:</strong> pointermove<br>
 <strong>Pointer Type:</strong> ${pointerType}<br>
 <strong>Position:</strong> (${e.clientX}, ${e.clientY})<br>
-<strong>Pressure:</strong> ${e.pressure.toFixed(2)}
+<strong>Pressure:</strong> ${e.pressure.toFixed(2)}<br>
+<strong style="color: #d9534f;">📱 Input Device:</strong> ${deviceStr}
             `;
             updateEventInfo('pointerEvent', info);
         });
@@ -655,19 +718,22 @@ ${Array.from(e.touches).map((t, i) =>
             const pointerType = e.pointerType === 'mouse' ? '🖱️ MOUSE' :
                                 e.pointerType === 'touch' ? '👆 TOUCH' :
                                 e.pointerType === 'pen' ? '✏️ PEN' : e.pointerType;
-            addLog('pointer', `pointerenter: ${pointerType}`);
+            const device = getInputDevice(e);
+            addLog('pointer', `pointerenter: ${pointerType} ${device ? `[Device: ${device}]` : ''}`);
         }, true);
 
         document.addEventListener('pointerleave', (e) => {
             const pointerType = e.pointerType === 'mouse' ? '🖱️ MOUSE' :
                                 e.pointerType === 'touch' ? '👆 TOUCH' :
                                 e.pointerType === 'pen' ? '✏️ PEN' : e.pointerType;
-            addLog('pointer', `pointerleave: ${pointerType}`);
+            const device = getInputDevice(e);
+            addLog('pointer', `pointerleave: ${pointerType} ${device ? `[Device: ${device}]` : ''}`);
         }, true);
 
         // 초기 로그
         addLog('key', '페이지 로드 완료. 이제 신규 리모컨을 테스트하세요!');
         console.log('Remote Control Test Page Loaded');
+        console.log('Input Device Detection: inputDevice > deviceName > device');
     </script>
 </body>
 </html>
