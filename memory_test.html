@@ -97,7 +97,20 @@ async function build() {
     frag.appendChild(label);
   }
   content.appendChild(frag);
+
+  // 화면에 들어온 이미지만 decode()를 강제해서 디코딩 비용을 실제로 발생시킴
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const img = e.target;
+      io.unobserve(img);
+      img.decode().then(() => { decodedCount++; }).catch(() => {});
+    }
+  }, { rootMargin: '200px 0px' });
+  document.querySelectorAll('img.tile').forEach(img => io.observe(img));
 }
+
+let decodedCount = 0;
 
 // 프레임 간격 측정: 50ms 이상 걸린 프레임을 끊김으로 계산
 let lastTs = performance.now();
@@ -119,8 +132,10 @@ function renderStats() {
   if (performance.memory) {
     heap = `\njsHeap: ${(performance.memory.usedJSHeapSize / 1048576).toFixed(1)} MB`;
   }
+  const scrollInfo = `scrollY: ${Math.round(window.scrollY)} / ${document.documentElement.scrollHeight}`;
   statsEl.textContent =
-    `frames: ${frames}  avg: ${avg.toFixed(1)}ms  max: ${maxFrame.toFixed(0)}ms  jank(>50ms): ${jankCount}` + heap;
+    `frames: ${frames}  avg: ${avg.toFixed(1)}ms  max: ${maxFrame.toFixed(0)}ms  jank(>50ms): ${jankCount}\n` +
+    `${scrollInfo}  decoded images: ${decodedCount}` + heap;
 }
 setInterval(renderStats, 1000);
 
@@ -147,3 +162,4 @@ build();
 </script>
 </body>
 </html>
+vvvvvvvvvvvvvv
